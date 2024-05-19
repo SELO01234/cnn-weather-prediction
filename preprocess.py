@@ -1,7 +1,11 @@
 import os
 import random
+import PIL.ImageOps
+import cv2
 import numpy as np
-from tensorflow.keras import utils as image_utils
+from PIL import Image
+from keras.preprocessing import image as image_utils
+from keras.preprocessing.image import ImageDataGenerator
 from PIL import Image, ImageOps
 
 # Root directory of images
@@ -20,7 +24,6 @@ batch_size = 50
 # Class labels
 classes = ["Sunny", "Rainy", "Snowy", "Foggy"]
 
-
 def convert_binary_to_class(label):
     """Converts a binary class matrix to a class vector (integer).
 
@@ -35,7 +38,6 @@ def convert_binary_to_class(label):
         new_lbl.append(np.argmax(label[i]))
     return new_lbl
 
-
 def get_accuracy(v_label, y):
     """Calculates the accuracy by comparing labels. If it's not 100 then it's a problem.
 
@@ -49,7 +51,6 @@ def get_accuracy(v_label, y):
     c = np.sum(np.fromiter((np.array_equal(y[i], v_label[i]) for i in range(len(y))), dtype=bool))
     return c / len(y)
 
-
 def sep_data(v_data, v_label):
     """Separates data into arrays that store [val_data, val_label] for each class.
 
@@ -58,17 +59,14 @@ def sep_data(v_data, v_label):
         v_label (numpy.ndarray): The corresponding labels.
 
     Returns:
-        list: A list of separated data and labels for each class.
+        tuple: Two lists, one for separated data and one for separated labels.
     """
     vd = [[[], []] for _ in range(4)]
     for i in range(len(v_data)):
         cls = int(v_label[i])
         vd[cls][0].append(v_data[i])
         vd[cls][1].append(cls)
-    for i in range(4):
-        vd[i][0] = np.array(vd[i][0])
-        vd[i][1] = np.array(vd[i][1])
-    return vd
+    return [np.array(vd[i][0]) for i in range(4)], [np.array(vd[i][1]) for i in range(4)]
 
 
 def better_crop(image_path, size, resize_only=False):
@@ -116,7 +114,6 @@ def better_crop(image_path, size, resize_only=False):
         random_crop = random.choice(crops)
         return np.array(random_crop.resize((size, size), Image.Resampling.LANCZOS))
 
-
 def prepare_dataset(image_root, dest, size):
     """Prepares the dataset by cropping and resizing images.
 
@@ -133,7 +130,6 @@ def prepare_dataset(image_root, dest, size):
                 # Save the cropped image to the destination directory
                 dest_path = os.path.join(dest, filename)
                 Image.fromarray(cropped_image).save(dest_path)
-
 
 def shuffle_data(data, label):
     """Shuffles the data and labels together.
@@ -155,7 +151,6 @@ def shuffle_data(data, label):
             print(f"Image at index {i} has a different shape: {img.shape}")
 
     return np.array(shuffled_data), np.array(shuffled_labels)
-
 
 def image_to_matrix(image_root, dest, size):
     """Converts images to matrices and saves them as .npy files.
@@ -196,7 +191,6 @@ def image_to_matrix(image_root, dest, size):
         train_data, train_label = shuffle_data(train_data, train_label)
         np.save(os.path.join(dest, "train_data.npy"), np.array(train_data))
         np.save(os.path.join(dest, "train_label.npy"), np.array(train_label))
-
 
 def images_to_matrix(image_root, dest, size, batch_size=8000):
     """Converts images to matrices and saves them in batches as .npy files.
@@ -244,7 +238,6 @@ def images_to_matrix(image_root, dest, size, batch_size=8000):
     else:
         print("No data to save.")
 
-
 def concatenate_datasets(data_dir="models", output_filename="train_data_concat.npy",
                          label_filename="train_label_concat.npy", max_samples_per_class=None):
     """Concatenates multiple datasets into a single dataset.
@@ -290,59 +283,32 @@ def concatenate_datasets(data_dir="models", output_filename="train_data_concat.n
 
     if all_data and all_labels:
         train_data = np.concatenate(all_data, axis=0)
-        train_label = np.concatenate(all_labels, axis=0)
+        train_labels = np.concatenate(all_labels, axis=0)
         print(f"Concatenated data shape: {train_data.shape}")
-        print(f"Concatenated labels shape: {train_label.shape}")
+        print(f"Concatenated labels shape: {train_labels.shape}")
 
-        train_data, train_label = shuffle_data(train_data, train_label)
+        train_data, train_labels = shuffle_data(train_data, train_labels)
 
         np.save(os.path.join(data_dir, output_filename), train_data)
-        np.save(os.path.join(data_dir, label_filename), train_label)
+        np.save(os.path.join(data_dir, label_filename), train_labels)
     else:
         print("No data to concatenate.")
 
 
 def process_all_images(image_root, dest, size, batch_size):
-    """Processes all images by preparing the dataset, converting images to matrices,
-    shuffling data, and concatenating datasets.
-
-    Args:
-        image_root (str): The root directory of the images.
-        dest (str): The destination directory for the processed files.
-        size (int): The desired size for the images.
-        batch_size (int): The number of images to process in each batch.
-    """
-    # Prepare dataset by cropping and resizing images
-    prepare_dataset(image_root, dest, size)
-
-    # Convert images to matrices and save them
-    images_to_matrix(image_root, dest, size, batch_size)
-
-    # Load the processed data
+    #prepare_dataset(image_root, dest, size)
+    #images_to_matrix(image_root, dest, size, batch_size)
     train_data = np.load(os.path.join(dest, "train_data.npy"))
     train_label = np.load(os.path.join(dest, "train_label.npy"))
-
-    # Convert binary class matrix to class vector (integer)
-    train_label = convert_binary_to_class(train_label)
-
-    # Separate data by class
-    separated_data = sep_data(train_data, train_label)
-
-    # Shuffle data
     shuffled_data, shuffled_labels = shuffle_data(train_data, train_label)
-
-    # Save shuffled data
-    np.save(os.path.join(dest, "shuffled_train_data.npy"), shuffled_data)
-    np.save(os.path.join(dest, "shuffled_train_label.npy"), shuffled_labels)
-
-    # Concatenate datasets if there are multiple parts
-    concatenate_datasets(dest)
-
-    # Optional: Print accuracy if needed
+    separated_data, separated_labels = sep_data(shuffled_data, shuffled_labels)
+   
+    combined_data = {
+        'separated_data': separated_data,
+        'separated_labels': separated_labels
+    }
+    np.save(os.path.join(dest, "combined_data.npy"), combined_data)
     accuracy = get_accuracy(shuffled_labels, convert_binary_to_class(shuffled_labels))
     print(f"Accuracy of validation after shuffling: {accuracy * 100:.2f}%")
 
-
-# Process all images
-def process_all_images_overridden():
-    process_all_images(image_root, dest, size, batch_size)
+process_all_images(image_root, dest, size, batch_size)
