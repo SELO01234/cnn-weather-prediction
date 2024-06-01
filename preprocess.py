@@ -125,58 +125,9 @@ def concatenate_datasets(data_dir="models", output_filename="train_data_concat.n
                          label_filename="train_label_concat.npy", max_samples_per_class=None):
     """Concatenates multiple datasets into a single dataset.
 
-    Args:
-        data_dir (str): The directory containing the datasets.
-        output_filename (str): The name of the output file for the concatenated data.
-        label_filename (str): The name of the output file for the concatenated labels.
-        max_samples_per_class (int, optional): The maximum number of samples per class.
+    changed
     """
-    all_data = []
-    all_labels = []
-
-    for filename in os.listdir(data_dir):
-        if (filename.startswith("train_data") and filename.endswith(".npy") and
-                filename != output_filename):
-            data_path = os.path.join(data_dir, filename)
-            label_path = os.path.join(data_dir, filename.replace("data", "label"))
-
-            try:
-                data = np.load(data_path)
-                labels = np.load(label_path)
-                print(f"Loaded {data_path} with shape {data.shape}")
-                print(f"Loaded {label_path} with shape {labels.shape}")
-            except Exception as e:
-                print(f"Error loading file {data_path} or {label_path}: {e}")
-                continue
-
-            if max_samples_per_class:
-                class_counts = np.bincount(labels)
-                indices_to_keep = []
-                for class_idx in range(len(class_counts)):
-                    class_indices = np.where(labels == class_idx)[0]
-                    if len(class_indices) > max_samples_per_class:
-                        class_indices = np.random.choice(class_indices, max_samples_per_class, replace=False)
-                    indices_to_keep.extend(class_indices)
-
-                data = data[indices_to_keep]
-                labels = labels[indices_to_keep]
-
-            all_data.append(data)
-            all_labels.append(labels)
-
-    if all_data and all_labels:
-        train_data = np.concatenate(all_data, axis=0)
-        train_labels = np.concatenate(all_labels, axis=0)
-        print(f"Concatenated data shape: {train_data.shape}")
-        print(f"Concatenated labels shape: {train_labels.shape}")
-
-        train_data, train_labels = shuffle_data(train_data, train_labels)
-
-        np.save(os.path.join(data_dir, output_filename), train_data)
-        np.save(os.path.join(data_dir, label_filename), train_labels)
-    else:
-        print("No data to concatenate.")
-
+    
 
 def process_all_images(image_root, dest, size, batch_size):
     #prepare_dataset(image_root, dest, size)
