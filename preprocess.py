@@ -130,19 +130,4 @@ def concatenate_datasets(data_dir="models", output_filename="train_data_concat.n
     
 
 def process_all_images(image_root, dest, size, batch_size):
-    #prepare_dataset(image_root, dest, size)
-    #images_to_matrix(image_root, dest, size, batch_size)
-    train_data = np.load(os.path.join(dest, "train_data.npy"))
-    train_label = np.load(os.path.join(dest, "train_label.npy"))
-    shuffled_data, shuffled_labels = shuffle_data(train_data, train_label)
-    separated_data, separated_labels = sep_data(shuffled_data, shuffled_labels)
-   
-    combined_data = {
-        'separated_data': separated_data,
-        'separated_labels': separated_labels
-    }
-    np.save(os.path.join(dest, "combined_data.npy"), combined_data)
-    accuracy = get_accuracy(shuffled_labels, convert_binary_to_class(shuffled_labels))
-    print(f"Accuracy of validation after shuffling: {accuracy * 100:.2f}%")
-
-process_all_images(image_root, dest, size, batch_size)
+    #changed
