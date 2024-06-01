@@ -71,49 +71,9 @@ def sep_data(v_data, v_label):
 
 def better_crop(image_path, size, resize_only=False):
     """Crops the image to the desired size, with an option to only resize.
-
-    Args:
-        image_path (str): The path to the image file.
-        size (int): The desired size for cropping or resizing.
-        resize_only (bool): If True, only resizes the image without cropping.
-
-    Returns:
-        numpy.ndarray: The cropped or resized image as an array.
+changed
     """
-    image = Image.open(image_path).convert('RGB')  # Ensure the image is in RGB mode
-    if image.size[0] >= image.size[1]:
-        # Landscape image
-        if resize_only:
-            base_height = size
-            wpercent = (base_height / float(image.size[1]))
-            wsize = int((float(image.size[0]) * float(wpercent)))
-            image = image.resize((wsize, base_height), Image.Resampling.LANCZOS)
-            return np.array(image)
-        crops = [
-            image.crop((0, 0, size, size)),
-            image.crop((image.size[0] - size, 0, image.size[0], size)),
-            image.crop((0, image.size[1] - size, size, image.size[1])),
-            image.crop((image.size[0] - size, image.size[1] - size, image.size[0], image.size[1]))
-        ]
-        random_crop = random.choice(crops)
-        return np.array(random_crop.resize((size, size), Image.Resampling.LANCZOS))
-    else:
-        # Portrait image
-        if resize_only:
-            base_width = size
-            wpercent = (base_width / float(image.size[0]))
-            hsize = int((float(image.size[1]) * float(wpercent)))
-            image = image.resize((base_width, hsize), Image.Resampling.LANCZOS)
-            return np.array(image)
-        crops = [
-            image.crop((0, 0, size, size)),
-            image.crop((0, image.size[1] - size, size, image.size[1])),
-            image.crop((image.size[0] - size, 0, image.size[0], size)),
-            image.crop((image.size[0] - size, image.size[1] - size, image.size[0], image.size[1]))
-        ]
-        random_crop = random.choice(crops)
-        return np.array(random_crop.resize((size, size), Image.Resampling.LANCZOS))
-
+    
 def prepare_dataset(image_root, dest, size):
     """Prepares the dataset by cropping and resizing images.
 
@@ -152,91 +112,14 @@ def shuffle_data(data, label):
 
     return np.array(shuffled_data), np.array(shuffled_labels)
 
-def image_to_matrix(image_root, dest, size):
-    """Converts images to matrices and saves them as .npy files.
 
-    Args:
-        image_root (str): The root directory of the images.
-        dest (str): The destination directory for the numpy files.
-        size (int): The desired size for the images.
-    """
-    train_data = []
-    train_label = []
-    classes_dir = ['sunny_e', 'rainy_e', 'snowy_e', 'foggy_e']
-
-    for cls in classes_dir:
-        class_path = os.path.join(image_root, cls)
-        print(f"Checking class directory: {class_path}")
-        if os.path.isdir(class_path):
-            for imageName in os.listdir(class_path):
-                image_path = os.path.join(class_path, imageName)
-                if os.path.isfile(image_path) and image_path.lower().endswith(('png', 'jpg', 'jpeg')):
-                    try:
-                        img = image_utils.load_img(image_path, target_size=(size, size))
-                        img = ImageOps.invert(img.convert('RGB'))  # Ensure the image is in RGB mode
-                        img = image_utils.img_to_array(img)
-                        if img.shape == (size, size, 3):
-                            train_data.append(img)
-                            train_label.append(classes_dir.index(cls))
-                        else:
-                            print(f"Skipping {image_path}, incorrect shape: {img.shape}")
-                    except Exception as e:
-                        print(f"Error processing file {image_path}: {e}")
-                else:
-                    print(f"'{image_path}' is not a valid image file.")
-        else:
-            print(f"'{class_path}' is not a directory.")
-
-    if train_data:
-        train_data, train_label = shuffle_data(train_data, train_label)
-        np.save(os.path.join(dest, "train_data.npy"), np.array(train_data))
-        np.save(os.path.join(dest, "train_label.npy"), np.array(train_label))
 
 def images_to_matrix(image_root, dest, size, batch_size=8000):
     """Converts images to matrices and saves them in batches as .npy files.
 
-    Args:
-        image_root (str): The root directory of the images.
-        dest (str): The destination directory for the numpy files.
-        size (int): The desired size for the images.
-        batch_size (int): The number of images to process in each batch.
+     changed
     """
-    all_data = []
-    all_labels = []
-    classes_dir = ['sunny_e', 'rainy_e', 'snowy_e', 'foggy_e']
-
-    for cls in classes_dir:
-        class_dir = os.path.join(image_root, cls)
-        print(f"Checking class directory: {class_dir}")
-        if os.path.isdir(class_dir):
-            for filename in os.listdir(class_dir):
-                image_path = os.path.join(class_dir, filename)
-                if os.path.isfile(image_path) and image_path.lower().endswith(('png', 'jpg', 'jpeg')):
-                    try:
-                        img = image_utils.load_img(image_path, target_size=(size, size))
-                        img = img.convert('RGB')  # Ensure the image is in RGB mode
-                        img = ImageOps.invert(img)
-                        img = image_utils.img_to_array(img)
-                        if img.shape == (size, size, 3):
-                            all_data.append(img)
-                            all_labels.append(classes_dir.index(cls))
-                        else:
-                            print(f"Skipping {image_path}, incorrect shape: {img.shape}")
-                    except Exception as e:
-                        print(f"Error processing file {image_path}: {e}")
-                else:
-                    print(f"'{image_path}' is not a valid image file.")
-        else:
-            print(f"'{class_dir}' is not a directory.")
-
-    if all_data and all_labels:
-        all_data, all_labels = shuffle_data(all_data, all_labels)
-        np.save(os.path.join(dest, "train_data.npy"), np.array(all_data))
-        np.save(os.path.join(dest, "train_label.npy"), np.array(all_labels))
-        print(
-            f"Saved train_data.npy and train_label.npy with shapes {np.array(all_data).shape} and {np.array(all_labels).shape}")
-    else:
-        print("No data to save.")
+    
 
 def concatenate_datasets(data_dir="models", output_filename="train_data_concat.npy",
                          label_filename="train_label_concat.npy", max_samples_per_class=None):
